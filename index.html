@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=utf-8 />
+    <title>Violance Against Civilians in Syria Jan 2017 to April 2018</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+    <script src="http://cdn.leafletjs.com/leaflet/v1.3.1/leaflet.js"></script>
+
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet/v1.3.1/leaflet.css" />
+    <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: whitesmoke;
+            font-family: Lato, sans-serif;
+            color: #0D0000;
+        }
+        header {
+            padding: 6px 10%;
+        }
+        h1 {
+            display: inline-block;
+            margin-right: 20px;
+            color: #001323;
+        }
+        h2 {
+            display: inline-block;
+            color: #001323;
+        }
+        #map {
+            width: 80%;
+            height: 640px;
+            margin: 10px auto;
+        }
+        footer {
+            padding: 6px 10%;
+            width: 80%;
+        }
+        p {
+            font-size: 1em;
+            color: #001323;
+        }
+        .info {
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        .info h4 {
+            margin: 0 0 5px;
+            color: #777;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Violance Against Civilians in Syria</h1>
+        <h2>January 2017 to April 2018</h2>
+    </header>
+
+    <div id='map'></div>
+
+    <footer>
+        <p>Map authored by Owen Clark</p>
+        <p>Data fo this map can be found here: <a href="https://www.acleddata.com/">acleddata</a></p>
+    </footer>
+
+    <script src="VAC_Syria.js"></script>
+    <script src="syria_admin.js"></script>
+    <script>
+        
+        var blackMap = L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+          subdomains: 'abcd',
+          maxZoom: 19
+        });
+        
+        var streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+	        maxZoom: 19,
+        })
+        
+        var imageryMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+	       attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
+       var map = L.map('map', {
+          center: [34.8021, 38.9968],
+          zoom: 7,
+          layers: imageryMap
+      });
+        
+var syria_admin = L.geoJson(syria_admin1, {
+    onEachFeature : function(feature,layer) {
+        layer.on('mouseover', function() {
+        info.update(layer.feature.properties);
+        layer.setStyle({
+        weight: 6,
+        fillOpacity: .2
+        });
+        });
+        layer.on('mouseout', function() {
+        info.update();
+        syria_admin.resetStyle(this);
+        });
+    },
+    style: function(feature) {
+        return {
+            stroke: true,
+            weight: 3,
+            color: 'grey',
+            fillOpacity: 0
+        } 
+    }
+}).addTo(map);
+
+var VAC = L.geoJson(data, {
+    pointToLayer: function(feature,latlng) {
+        return L.circleMarker(latlng);
+    },
+    onEachFeature : function(feature,layer) {
+        layer.bindPopup(getPopup(layer.feature.properties));
+        layer.on('mouseover', function() {
+        layer.bringToFront();
+        layer.setStyle({
+        fillColor: '#880000',
+        radius: 8
+        });
+        });
+        layer.on('mouseout', function() {
+        VAC.resetStyle(this);
+        });
+    },
+    style: function(feature) {
+        return {
+            stroke: false,
+            fillColor: "#880000",
+            fillOpacity: 1,
+            radius: 5
+        } 
+    }
+}).addTo(map);
+        
+function getPopup(props){
+    return  "<b>Event Date: "+props.event_date+"</b><br>"+
+            "<b>Governorate: "+props.admin1+"</b><br>"+
+            "<b>District: "+props.admin2+"</b><br>"+
+            "<b>Subdistrict: "+props.admin3+"</b><br>"+
+            "<b>Info: "+props.notes+"</b><br>";
+}
+        
+var info = L.control({position: 'topright'});
+
+
+info.onAdd = function (map) {
+    this._div = L.DomUtil.create('div', 'info');
+    this.update();
+    return this._div;
+};
+
+info.update = function (props) {
+    this._div.innerHTML = '<h4>Governorate and Area in sq km</h4>' +  (props ?
+                        "<b>Governorate: "+props.NAME_EN+"</b><br>"+
+                        "<b>Area: "+props.AREA_SQKM+" sq km</b><br>"
+                        : 'Hover Over an Area');
+};
+
+info.addTo(map);
+
+var baseMaps = {
+"<b>Black Map</b>": blackMap,
+"<b>Streets Map</b>": streetMap,
+"<b>Imagery Map</b>": imageryMap
+}
+
+var layers = {}
+
+L.control.layers(baseMaps, layers, {position: 'bottomright', collapsed:false }).addTo(map);
+                   
+    </script>
+    
+</body>
+
+</html>
